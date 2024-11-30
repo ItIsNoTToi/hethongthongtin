@@ -22,12 +22,11 @@
  *                                                                         *
  ***************************************************************************/
 """
-from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
-from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction
+from PyQt5.QtCore import QSettings, QTranslator, QCoreApplication
+from PyQt5.QtGui import QIcon
 
 from PyQt5 import uic
-from PyQt5.QtWidgets import QFileDialog, QMessageBox
+from PyQt5.QtWidgets import QFileDialog, QMessageBox, QAction
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -35,7 +34,6 @@ import matplotlib.pyplot as plt
 from .resources import *
 # Import the code for the dialog
 from .Atribute_Connect_dialog import Atribute_ConnectDialog
-from .Atribute_Connect_dialog_base import Ui_Atribute_ConnectDialogBase
 import os.path
 
 
@@ -198,11 +196,15 @@ class Atribute_Connect:
             self.dlg = Atribute_ConnectDialog()
 
         # show the dialog
-        self.dlg.show()
+        self.dlg.showMaximized()
+
         # Run the dialog event loop
         result = self.dlg.exec_()
+        
         # See if OK was pressed
         if result:
             # Do something useful here - delete the line containing pass and
             # substitute with your code.
-            pass
+            pass 
+            
+    
