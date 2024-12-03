@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Atribute_ConnectDialogBase</class>
+ <widget class="QDialog" name="Atribute_ConnectDialogBase">
+  <property name="enabled">
+   <bool>true</bool>
+  </property>
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1325</width>
+    <height>821</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Atribute_Connect</string>
+  </property>
+  <property name="sizeGripEnabled">
+   <bool>false</bool>
+  </property>
+  <widget class="QLabel" name="dulieuthuoctinh">
+   <property name="geometry">
+    <rect>
+     <x>920</x>
+     <y>260</y>
+     <width>141</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Bảng dữ liệu thuộc tính</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="dulieukhonggian">
+   <property name="geometry">
+    <rect>
+     <x>270</x>
+     <y>270</y>
+     <width>131</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Lớp dữ liệu không gian</string>
+   </property>
+  </widget>
+  <widget class="QComboBox" name="comboBox_khonggian">
+   <property name="geometry">
+    <rect>
+     <x>330</x>
+     <y>90</y>
+     <width>121</width>
+     <height>22</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QComboBox" name="comboBox_thuoctinh">
+   <property name="geometry">
+    <rect>
+     <x>330</x>
+     <y>160</y>
+     <width>121</width>
+     <height>22</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QTableWidget" name="tableWidget">
+   <property name="geometry">
+    <rect>
+     <x>680</x>
+     <y>300</y>
+     <width>631</width>
+     <height>441</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QTableWidget" name="tableWidget_2">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>300</y>
+     <width>651</width>
+     <height>441</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="pushButton">
+   <property name="geometry">
+    <rect>
+     <x>540</x>
+     <y>70</y>
+     <width>181</width>
+     <height>51</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Chon lớp dữ liệu không gian</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="pushButton_2">
+   <property name="geometry">
+    <rect>
+     <x>540</x>
+     <y>140</y>
+     <width>181</width>
+     <height>51</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Chon bảng dữ liệu thuộc tính</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="btn_link">
+   <property name="geometry">
+    <rect>
+     <x>770</x>
+     <y>70</y>
+     <width>161</width>
+     <height>71</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Lien ket</string>
+   </property>
+   <property name="icon">
+    <iconset>
+     <normaloff>icon.png</normaloff>icon.png</iconset>
+   </property>
+  </widget>
+  <widget class="QLabel" name="dulieukhonggian_2">
+   <property name="geometry">
+    <rect>
+     <x>60</x>
+     <y>90</y>
+     <width>261</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Chon truong lien ket lớp dữ liệu không gian</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="dulieuthuoctinh_2">
+   <property name="geometry">
+    <rect>
+     <x>60</x>
+     <y>150</y>
+     <width>261</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Chon truong lien ket bảng dữ liệu thuộc tính</string>
+   </property>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
