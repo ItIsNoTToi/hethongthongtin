@@ -1,0 +1,16 @@
+<RCC>
+    <qresource prefix="/plugins/Atribute_Connect" >
+        <file>icon.png</file>
+        <file>full-screen.png</file>
+        <file>menu.png</file>
+        <file>minus-sign.png</file>
+        <file>close.png</file>
+        <file>bar-chart2.png</file>
+        <file>line-chart.png</file>
+        <file>pie-chart.png</file>
+        <file>bar-chart.png</file>
+        <file>dashboard.png</file>
+        <file>excel.png</file>
+        <file>interest-rate.png</file>
+    </qresource>
+</RCC>

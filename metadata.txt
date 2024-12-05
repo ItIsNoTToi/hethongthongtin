@@ -1,0 +1,19 @@
+# This file contains metadata for your plugin.
+[general]
+name=Atribute_Connect
+qgisMinimumVersion=3.0
+description=Xây dựng Plugin đọc và liên kết bảng dữ liệu thuộc tính với một lớp dữ liệu không gian có sẵn và export ra bảng dữ liệu mới để thống kê báo cáo.
+version=0.1
+author=Group2
+email=giangvanhung2003@gmail.com
+about=Nội dung: Xây dựng Plugin đọc và liên kết bảng dữ liệu thuộc tính với một lớp dữ liệu không gian có sẵn và export ra bảng dữ liệu mới để thống kê báo cáo. Yêu cầu: giao diện chọn lớp dữ liệu không gian và bảng thuộc tính, chọn trường liên kết, chọn trường thuộc tính cần thống kê, và tính toán thống kê, xuất kết quả.
+tracker=http://placeholder.com/bugs
+repository=http://placeholder.com/repo
+hasProcessingProvider=no
+tags=python
+homepage=http://placeholder.com/homepage
+category=Vector
+icon=icon.png
+experimental=False
+deprecated=False
+server=False
