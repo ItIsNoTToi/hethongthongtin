@@ -26,7 +26,7 @@ import os
 import pandas as pd 
 import matplotlib.pyplot as plt
 
-from PyQt5.QtWidgets import QDialog, QFileDialog, QTableWidgetItem, QMessageBox 
+from PyQt5.QtWidgets import *
 from PyQt5 import uic, QtWidgets 
 from qgis.core import QgsVectorLayer, QgsProject, QgsField
 from PyQt5.QtCore import Qt 
@@ -65,8 +65,6 @@ FORM_CLASS, _ = uic.loadUiType(os.path.join(
 
 
 class Atribute_ConnectDialog(QtWidgets.QDialog, FORM_CLASS):
-
-
     def __init__(self, parent=None):
         """Constructor."""
         super(Atribute_ConnectDialog, self).__init__(parent)
@@ -81,12 +79,29 @@ class Atribute_ConnectDialog(QtWidgets.QDialog, FORM_CLASS):
         self.btn_ChonLopDuLieuKhongGIan.clicked.connect(self.select_vector_layer) 
         self.btn_ChonBangDuLieuThuocTinh.clicked.connect(self.select_attribute_table) 
         self.btn_LienKet.clicked.connect(self.link_attributes) 
-        
-        '''self.btn_export.clicked.connect(self.export_result) 
-        self.btn_statistics.clicked.connect(self.show_statistics)'''
+        self.btn_statistics.clicked.connect(lambda: self.show_linked_result(self.linked_data))
+        self.btn_export.clicked.connect(self.export_result) 
+
+        self.checkboxes = {}  # Lưu trữ các checkbox theo tên
+        self.group_box = QGroupBox(self)  # GroupBox
+        self.layout = QVBoxLayout(self.group_box)  # Layout của GroupBox
+        self.DuLieuLienKet.setWidget(self.group_box)
+        self.DuLieuLienKet.setWidgetResizable(True)
+       
+        self.tb_BLK.cellClicked.connect(lambda row, col: self.update_line_edit(self.tb_BLK, row, col)) 
+        self.tb_LKG.cellClicked.connect(lambda row, col: self.update_line_edit(self.tb_LKG, row, col)) 
+        self.tb_BTT.cellClicked.connect(lambda row, col: self.update_line_edit(self.tb_BTT, row, col)) 
+        self.lineEdit.editingFinished.connect(self.update_table_cell)
 
         self.vector_layer = None 
         self.attribute_data = None
+        # dữ liệu sau lên kết
+        self.linked_data = None
+
+        # Lưu thông tin bảng, dòng, cột hiện tại
+        self.current_table = None
+        self.current_row = -1
+        self.current_col = -1
 
     def select_vector_layer(self): 
         """Chọn lớp dữ liệu không gian (Vector).""" 
@@ -117,59 +132,106 @@ class Atribute_ConnectDialog(QtWidgets.QDialog, FORM_CLASS):
             elif attribute_table.endswith('.xlsx') or attribute_table.endswith('.xls'):
                 self.attribute_data = pd.read_excel(attribute_table)
             else:
-                QMessageBox.warning(self, "Lỗi", "Chỉ hỗ trợ định dạng DBF, CSV và Excel.")
+                self.show_warning("Lỗi", "Chỉ hỗ trợ định dạng DBF, CSV và Excel.")
                 return
             
             if self.attribute_data is not None and not self.attribute_data.empty:
                 self.show_attribute_table()
                 self.cmb_TruongDich.clear()
+
+                self.clear_all_checkboxes()
+
                 for col in self.attribute_data.columns:
                     self.cmb_TruongDich.addItem(col)
+                    self.add_checkbox(col)
             else:
-                QMessageBox.warning(self, "Lỗi", "Bảng dữ liệu thuộc tính trống.")
+                self.show_warning("Lỗi", "Bảng dữ liệu thuộc tính trống.")
 
+    def add_checkbox(self, field_name):
+        """Thêm một checkbox vào ScrollArea."""
+        if field_name not in self.checkboxes:
+            checkbox = QCheckBox(field_name, self.group_box)
+            self.layout.addWidget(checkbox)  # Thêm checkbox vào layout
+            self.checkboxes[field_name] = checkbox  # Lưu checkbox theo tên trường
+
+    def get_selected_fields(self):
+        """Lấy danh sách các trường được chọn."""
+        return [
+            field_name
+            for field_name, checkbox in self.checkboxes.items()
+            if checkbox.isChecked()
+        ]
+    
+    def clear_all_checkboxes(self):
+        """Xóa tất cả các thành phần (làm mới giao diện)."""
+        # Xóa các checkbox trong layout
+        for field_name, checkbox in self.checkboxes.items():
+            checkbox.setParent(None)  # Loại bỏ checkbox khỏi giao diện
+
+        # Xóa từ điển checkboxes
+        self.checkboxes.clear()
+        
     def link_attributes(self):
+        """Liên kết dữ liệu thuộc tính với lớp dữ liệu không gian."""
         if not self.vector_layer or self.attribute_data is None:
-            QMessageBox.warning(self, "Lỗi", "Vui lòng chọn lớp dữ liệu không gian và bảng dữ liệu thuộc tính trước.")
+            self.show_warning("Lỗi", "Vui lòng chọn lớp dữ liệu không gian và bảng dữ liệu thuộc tính trước.")
             return
 
         link_field = self.cmb_TruongKetHop.currentText()
         attr_field = self.cmb_TruongDich.currentText()
+        link_item_fields = self.get_selected_fields()
+
+        # Nếu không chọn các trường liên kết cụ thể, lấy toàn bộ cột từ bảng thuộc tính
+        if not link_item_fields or len(link_item_fields) == 0:
+            link_item_fields = self.attribute_data.columns.tolist()
+
         if not link_field or not attr_field:
-            QMessageBox.warning(self, "Lỗi", "Vui lòng chọn trường liên kết.")
+            self.show_warning("Lỗi", "Vui lòng chọn trường liên kết.")
             return
 
-        try:
-            spatial_data = pd.DataFrame([feature.attributes() for feature in self.vector_layer.getFeatures()], 
+        spatial_data = []
+        
+        # Thu thập dữ liệu không gian từ lớp vector và chuyển thành DataFrame
+        spatial_data = pd.DataFrame([feature.attributes() for feature in self.vector_layer.getFeatures()], 
                                         columns=[field.name() for field in self.vector_layer.fields()])
-            matched_data = pd.merge(spatial_data, self.attribute_data, left_on=link_field, right_on=attr_field, how='inner')
 
-            if matched_data.empty:
-                QMessageBox.warning(self, "Lỗi", "Không có dữ liệu trùng khớp.")
-            else:
-                self.show_linked_result(matched_data)
-                QMessageBox.information(self, "Thành công", "Dữ liệu đã được liên kết!")
+        try:
+            # Kết hợp dữ liệu không gian và dữ liệu thuộc tính
+            matched_data = pd.merge(
+                spatial_data,
+                self.attribute_data,
+                left_on=link_field,
+                right_on=attr_field,
+                how='inner'
+            )
         except KeyError as e:
-            QMessageBox.warning(self, "Lỗi", f"Trường không hợp lệ: {str(e)}")
-        except Exception as e:
-            QMessageBox.critical(self, "Lỗi", f"Đã xảy ra lỗi: {str(e)}")
+            self.show_warning("Lỗi", f"Không thể kết nối các trường: {str(e)}")
+            return
 
+        # Kiểm tra kết quả sau khi kết hợp dữ liệu
+        if matched_data.empty:
+            self.show_warning("Lỗi", "Không có dữ liệu trùng khớp giữa lớp không gian và bảng dữ liệu thuộc tính.")
+            return
 
-    def show_linked_result(self, matched_data):
+        # Nếu dữ liệu kết hợp thành công, hiển thị kết quả
+        QMessageBox.information(self, "Thành công", "Dữ liệu đã được liên kết thành công!")
+        print("Kết quả liên kết:")
+        print(matched_data)
+
+        # Hiển thị kết quả kết hợp
+        self.linked_data = matched_data
+        self.show_linked_table()
+        self.show_linked_result(matched_data)
+
+    def show_linked_result(self, linked_data):
         """Hiển thị bảng kết quả liên kết trong giao diện."""
+        if linked_data is None:
+            QMessageBox.information(self, "Lỗi", "Dữ liệu liên kết trống. Vui lòng thực hiện liên kết trước.")
+            return
+        print(linked_data)
+        
         # Tạo cửa sổ mới để hiển thị kết quả
-        if matched_data is not None and not matched_data.empty:
-            self.tb_BLK.setRowCount(0)
-            self.tb_BLK.setColumnCount(len(matched_data.columns))
-            self.tb_BLK.setHorizontalHeaderLabels(matched_data.columns)
-
-            for index, row in matched_data.iterrows():
-                row_position = self.tb_BLK.rowCount()
-                self.tb_BLK.insertRow(row_position)
-                for col, value in enumerate(row):
-                    self.tb_BLK.setItem(row_position, col, QTableWidgetItem(str(value)))
-
-        result_window = link_Dialog(self, matched_data)
+        result_window = link_Dialog(self, linked_data)
         result_window.show()
 
     def show_tableWidget(self, layer): 
@@ -184,10 +246,10 @@ class Atribute_ConnectDialog(QtWidgets.QDialog, FORM_CLASS):
             self.tb_LKG.insertRow(row_position) 
             for col, field in enumerate(fields): 
                 value = feature[field.name()] 
-                self.tb_LKG.setItem(row_position, col, QTableWidgetItem(str(value))) 
+                self.tb_LKG.setItem(row_position, col, QTableWidgetItem(str(value)))
                 
     def show_attribute_table(self):
-        """Hiển thị bảng dữ liệu thuộc tính vào tableWidget."""
+        """Hiển thị bảng dữ liệu thuộc tính vào tb_BTT."""
         if self.attribute_data is not None and not self.attribute_data.empty:
             self.tb_BTT.setRowCount(0)
             self.tb_BTT.setColumnCount(len(self.attribute_data.columns))
@@ -199,56 +261,82 @@ class Atribute_ConnectDialog(QtWidgets.QDialog, FORM_CLASS):
                 for col, value in enumerate(row):
                     self.tb_BTT.setItem(row_position, col, QTableWidgetItem(str(value)))
 
+    def show_linked_table(self):
+        """Hiển thị bảng dữ liệu sau khi được liên kết"""
+        if self.linked_data is not None and not self.linked_data.empty:
+            self.tb_BLK.setRowCount(0)
+            self.tb_BLK.setColumnCount(len(self.linked_data.columns))
+            self.tb_BLK.setHorizontalHeaderLabels(self.linked_data.columns)
 
+            for index, row in self.linked_data.iterrows():
+                row_position = self.tb_BLK.rowCount()
+                self.tb_BLK.insertRow(row_position)
+                for col, value in enumerate(row):
+                    self.tb_BLK.setItem(row_position, col, QTableWidgetItem(str(value)))      
 
-    '''def export_result(self): 
-        """Xuất kết quả thống kê.""" 
-        output_file, _ = QFileDialog.getSaveFileName(self, "Lưu kết quả", "", "CSV files (*.csv)") 
-        if not output_file: 
-            return
-        
-        result_data = [] 
-        fields = self.vector_layer.fields() 
-        for feature in self.vector_layer.getFeatures(): 
-            row = [feature[field.name()] for field in fields] 
-            result_data.append(row) 
+    def show_warning(self, title, message):
+        """
+        Hiển thị một thông báo cảnh báo dạng dialog trong QGIS.
 
-        df_result = pd.DataFrame(result_data, columns=[field.name() for field in fields]) 
-        df_result.to_csv(output_file, index=False) 
-        QMessageBox.information(self, "Thành công", "Kết quả đã được lưu thành công!") 
+        Parameters:
+            title: str
+                Tiêu đề của thông báo.
+            message: str
+                Nội dung của thông báo.
+        """
+        msg_box = QMessageBox()
+        msg_box.setIcon(QMessageBox.Warning)
+        msg_box.setWindowTitle(title)
+        msg_box.setText(message)
+        msg_box.setStandardButtons(QMessageBox.Ok)
+        msg_box.exec_()
 
-    def show_statistics(self):
-        """Hiển thị bảng và đồ thị thống kê."""
-        selected_field = self.comboBox_solieucanthongke.currentText()
-        category_field = self.comboBox_danhmuc.currentText()
-        agg_function = self.comboBox_hamthongke.currentText()
+    def update_line_edit(self, table, row, col):
+        """Cập nhật QLineEdit với giá trị từ ô được chọn."""
+        item = table.item(row, col)
+        if item:
+            self.lineEdit.setText(item.text())
+        else:
+            self.lineEdit.clear()
 
-        if not selected_field or not category_field or not agg_function:
-            QMessageBox.warning(self, "Lỗi", "Vui lòng chọn trường số liệu, danh mục và hàm thống kê.")
-            return
+        # Lưu thông tin bảng, dòng, cột hiện tại
+        self.current_table = table
+        self.current_row = row
+        self.current_col = col
 
-        # Tính toán thống kê
-        if agg_function == 'count':
-            stats = self.attribute_data.groupby(category_field)[selected_field].count()
-        elif agg_function == 'sum':
-            stats = self.attribute_data.groupby(category_field)[selected_field].sum()
-        # Bạn có thể thêm các hàm thống kê khác như mean, median, v.v.
+    def update_table_cell(self):
+        """Cập nhật giá trị từ QLineEdit vào ô hiện tại."""
+        if self.current_table and self.current_row >= 0 and self.current_col >= 0:
+            new_value = self.lineEdit.text()
+            self.current_table.setItem(self.current_row, self.current_col, QTableWidgetItem(new_value))
 
-        # Hiển thị kết quả dạng bảng
-        self.tableWidget_3.setRowCount(0)
-        self.tableWidget_3.setColumnCount(2)
-        self.tableWidget_3.setHorizontalHeaderLabels([category_field, agg_function])
+    def export_result(self):
+        self.export_to_excel(self.linked_data, "Bang dữ liệu liệu liên kết")
 
-        for idx, (cat, val) in enumerate(stats.items()):
-            self.tableWidget_3.insertRow(idx)
-            self.tableWidget_3.setItem(idx, 0, QTableWidgetItem(str(cat)))
-            self.tableWidget_3.setItem(idx, 1, QTableWidgetItem(str(val)))
+    def export_to_excel(self, data, fileName = "Excel"):
+        """
+        Xuất dữ liệu DataFrame sang tệp Excel, cho phép người dùng chọn nơi lưu.
 
-        # Hiển thị kết quả dạng đồ thị
-        plt.figure()
-        stats.plot(kind='bar')
-        plt.title(f'{agg_function} of {selected_field} by {category_field}')
-        plt.xlabel(category_field)
-        plt.ylabel(selected_field)
-        plt.show()
-        '''
+        Parameters:
+            data: DataFrame
+                Dữ liệu cần xuất.
+        """
+        if data is not None and not data.empty:
+            try:
+                options = QFileDialog.Options()
+                file_path, _ = QFileDialog.getSaveFileName(
+                    self, 
+                    "Chọn nơi lưu tệp " + fileName, 
+                    "", 
+                    "Excel Files (*.xlsx);;All Files (*)", 
+                    options=options
+                )
+                if file_path:
+                    data.to_excel(file_path, index=False)
+                    QMessageBox.information(self, "Thành công", f"Dữ liệu đã được xuất ra tệp {file_path}")
+                else:
+                    QMessageBox.warning(self, "Lỗi", "Đã huỷ chọn nơi lưu tệp")
+            except Exception as e:
+                QMessageBox.warning(self, "Lỗi", f"Xuất dữ liệu thất bại: {str(e)}")
+        else:
+            QMessageBox.warning(self, "Lỗi", "Không có dữ liệu để xuất")
